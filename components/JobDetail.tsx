@@ -55,7 +55,9 @@ export function JobDetail({ job, sync = 'synced' }: JobDetailProps) {
   function handleCall() {
     const phone = customer?.phone;
     if (!phone) { Alert.alert('No phone number', 'Edit this customer to add one.'); return; }
-    Linking.openURL(`tel:${phone.replace(/\D/g, '')}`);
+    Linking.openURL(`tel:${phone.replace(/\D/g, '')}`).catch(() => {
+      Alert.alert(customer?.name ?? 'Customer', phone, [{ text: 'OK' }]);
+    });
   }
 
   function handleMap() {

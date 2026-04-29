@@ -27,7 +27,9 @@ export default function CustomerDetailScreen() {
 
   function handleCall() {
     if (!c.phone) { Alert.alert('No phone number', 'Edit this customer to add one.'); return; }
-    Linking.openURL(`tel:${c.phone.replace(/\D/g, '')}`);
+    Linking.openURL(`tel:${c.phone.replace(/\D/g, '')}`).catch(() => {
+      Alert.alert(c.name, c.phone, [{ text: 'OK' }]);
+    });
   }
 
   const totalValue = jobs.reduce((s, j) => s + j.price, 0);
