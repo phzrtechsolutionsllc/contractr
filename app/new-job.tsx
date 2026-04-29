@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { C, FONT } from '@/lib/constants';
 import { addJob } from '@/db/hooks';
 import { CustomerPicker } from '@/components/CustomerPicker';
+import { DateField, fmtDueDate } from '@/components/ui/DateField';
 import type { Customer } from '@/lib/types';
 import { Icon } from '@/components/ui/Icon';
 
@@ -54,7 +55,7 @@ export default function NewJobScreen() {
   const [address,    setAddress]    = useState(params.customerAddress ? decodeURIComponent(params.customerAddress) : '');
   const [price,      setPrice]      = useState('');
   const [hours,      setHours]      = useState('');
-  const [due,        setDue]        = useState('');
+  const [dueDate,    setDueDate]    = useState<Date | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const canSave = title.trim().length > 0 && customer.trim().length > 0;
@@ -75,7 +76,7 @@ export default function NewJobScreen() {
       address:    address.trim() || '—',
       status:     'new',
       scheduled:  'Needs scheduling',
-      due:        due.trim() || '—',
+      due:        dueDate ? fmtDueDate(dueDate) : '—',
       price:      parseFloat(price) || 0,
       hours:      0,
       hoursEst:   parseFloat(hours) || 0,
@@ -116,8 +117,8 @@ export default function NewJobScreen() {
 
           <Field label="Address"    value={address} onChangeText={setAddress} placeholder="Street address" />
           <Field label="Price ($)"  value={price}   onChangeText={setPrice}   placeholder="0" keyboardType="decimal-pad" />
-          <Field label="Est. Hours" value={hours}   onChangeText={setHours}   placeholder="0" keyboardType="decimal-pad" />
-          <Field label="Due Date"   value={due}     onChangeText={setDue}     placeholder="e.g. Apr 25" />
+          <Field label="Est. Hours" value={hours} onChangeText={setHours} placeholder="0" keyboardType="decimal-pad" />
+          <DateField label="Start Date" value={dueDate} onChange={setDueDate} />
         </ScrollView>
       </KeyboardAvoidingView>
 

@@ -8,8 +8,29 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { C, FONT } from '@/lib/constants';
 import { useJob, updateJob } from '@/db/hooks';
 import { CustomerPicker } from '@/components/CustomerPicker';
+import { DateField, fmtDueDate } from '@/components/ui/DateField';
 import type { Customer } from '@/lib/types';
 import { Icon } from '@/components/ui/Icon';
+
+const MONTH_IDX: Record<string, number> = {
+  Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11,
+};
+
+function parseDueStr(due: string | undefined): Date | null {
+  if (!due || due === '—') return null;
+  const parts = due.trim().split(' ');
+  const month = MONTH_IDX[parts[0]];
+  const day   = parseInt(parts[1], 10);
+  if (month === undefined || isNaN(day)) return null;
+  if (parts.length >= 3) {
+    const year = parseInt(parts[2], 10);
+    if (!isNaN(year)) return new Date(year, month, day);
+  }
+  const now  = new Date();
+  let year   = now.getFullYear();
+  if (month < now.getMonth() - 2) year += 1;
+  return new Date(year, month, day);
+}
 
 interface FieldProps {
   label: string;
@@ -52,7 +73,7 @@ export default function EditJobScreen() {
   const [address,    setAddress]    = useState(job?.address  ?? '');
   const [price,      setPrice]      = useState(job?.price    ? String(job.price)    : '');
   const [hoursEst,   setHoursEst]   = useState(job?.hoursEst ? String(job.hoursEst) : '');
-  const [due,        setDue]        = useState(job?.due      ?? '');
+  const [dueDate,    setDueDate]    = useState<Date | null>(() => parseDueStr(job?.due));
   const [desc,       setDesc]       = useState(job?.desc     ?? '');
   const [pickerOpen, setPickerOpen] = useState(false);
 
@@ -73,7 +94,7 @@ export default function EditJobScreen() {
       address:    address.trim() || '—',
       price:      parseFloat(price)    || 0,
       hoursEst:   parseFloat(hoursEst) || 0,
-      due:        due.trim() || '—',
+      due:        dueDate ? fmtDueDate(dueDate) : '—',
       desc:       desc.trim(),
     });
     router.back();
@@ -117,7 +138,7 @@ export default function EditJobScreen() {
           <Field label="Address"     value={address}  onChangeText={setAddress}  placeholder="Street address" />
           <Field label="Price ($)"   value={price}    onChangeText={setPrice}    placeholder="0" keyboardType="decimal-pad" />
           <Field label="Est. Hours"  value={hoursEst} onChangeText={setHoursEst} placeholder="0" keyboardType="decimal-pad" />
-          <Field label="Due Date"    value={due}      onChangeText={setDue}      placeholder="e.g. Apr 25" />
+          <DateField label="Start Date" value={dueDate} onChange={setDueDate} />
           <Field label="Notes"       value={desc}     onChangeText={setDesc}     placeholder="Job notes..." multiline />
         </ScrollView>
       </KeyboardAvoidingView>
