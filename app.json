@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "CONTRACTR",
+    "slug": "contractr",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "scheme": "contractr",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "io.phzr.contractr"
+    },
+    "android": {
+      "package": "io.phzr.contractr"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-asset",
+      "expo-audio",
+      "expo-sqlite"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
