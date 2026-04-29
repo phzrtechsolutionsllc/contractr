@@ -1,7 +1,7 @@
 import React, { useCallback, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  Alert, Image, TextInput, Modal,
+  Alert, Image, TextInput, Modal, Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -13,7 +13,7 @@ import {
 } from 'expo-audio';
 import { C, FONT, STATUS_LABEL, STATUS_COLOR, money } from '@/lib/constants';
 import {
-  useJobTimeline, useJobMaterials,
+  useJobTimeline, useJobMaterials, useCustomer,
   clockIn, clockOut, updateStatus, updateJob,
   addPhotoEntry, addVoiceEntry,
   addMaterial, toggleMaterialGot, deleteMaterial,
@@ -46,9 +46,26 @@ export function JobDetail({ job, sync = 'synced' }: JobDetailProps) {
   const router    = useRouter();
   const timeline  = useJobTimeline(job.id);
   const materials = useJobMaterials(job.id);
+  const customer  = useCustomer(job.customerId);
   const sc        = STATUS_COLOR[job.status];
   const nexts     = TRANSITIONS[job.status] ?? [];
   const isClockedIn = Boolean(job.clockedInAt);
+
+  // ---- Phone / Map ----
+  function handleCall() {
+    const phone = customer?.phone;
+    if (!phone) { Alert.alert('No phone number', 'Edit this customer to add one.'); return; }
+    Linking.openURL(`tel:${phone.replace(/\D/g, '')}`);
+  }
+
+  function handleMap() {
+    const addr = job.address !== '—' ? job.address : null;
+    if (!addr) { Alert.alert('No address', 'Edit this job to add an address.'); return; }
+    const encoded = encodeURIComponent(addr);
+    Linking.openURL(`maps://?q=${encoded}`).catch(() =>
+      Linking.openURL(`https://maps.apple.com/?q=${encoded}`)
+    );
+  }
 
   // ---- Notes ----
   const [notes, setNotes] = useState(job.desc ?? '');
@@ -188,10 +205,10 @@ export function JobDetail({ job, sync = 'synced' }: JobDetailProps) {
               <Text style={styles.customerName}>{job.customer}</Text>
               <Text style={styles.customerAddr}>{job.address}</Text>
             </View>
-            <TouchableOpacity style={styles.callBtn} activeOpacity={0.8}>
+            <TouchableOpacity style={styles.callBtn} activeOpacity={0.8} onPress={handleCall}>
               <Icon name="phone" size={22} stroke={2.5} color="#0A0A0A" />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.mapBtn} activeOpacity={0.8}>
+            <TouchableOpacity style={styles.mapBtn} activeOpacity={0.8} onPress={handleMap}>
               <Icon name="map" size={22} stroke={2} color={C.ink} />
             </TouchableOpacity>
           </View>
