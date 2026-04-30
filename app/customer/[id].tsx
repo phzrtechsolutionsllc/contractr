@@ -5,7 +5,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { C, FONT, STATUS_COLOR, STATUS_LABEL, money } from '@/lib/constants';
-import { useCustomer, useCustomerJobs } from '@/db/hooks';
+import { useCustomer, useCustomerJobs, deleteCustomer } from '@/db/hooks';
 import { Icon } from '@/components/ui/Icon';
 
 export default function CustomerDetailScreen() {
@@ -35,6 +35,21 @@ export default function CustomerDetailScreen() {
   const totalValue = jobs.reduce((s, j) => s + j.price, 0);
   const doneCount  = jobs.filter(j => j.status === 'done').length;
 
+  function handleDelete() {
+    Alert.alert(
+      'Delete customer?',
+      `"${c.name}" will be permanently removed. Their jobs will remain.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => { deleteCustomer(c.id); router.back(); },
+        },
+      ],
+    );
+  }
+
   return (
     <SafeAreaView style={styles.root}>
       <ScrollView contentContainerStyle={styles.content}>
@@ -44,13 +59,18 @@ export default function CustomerDetailScreen() {
             <Icon name="chevron" size={18} color={C.ink} style={{ transform: [{ rotate: '180deg' }] }} />
             <Text style={styles.backLabel}>People</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.editBtn}
-            activeOpacity={0.8}
-            onPress={() => router.push(`/edit-customer?id=${c.id}`)}
-          >
-            <Icon name="edit" size={16} stroke={2} color={C.ink} />
-          </TouchableOpacity>
+          <View style={styles.topRight}>
+            <TouchableOpacity
+              style={styles.editBtn}
+              activeOpacity={0.8}
+              onPress={() => router.push(`/edit-customer?id=${c.id}`)}
+            >
+              <Icon name="edit" size={16} stroke={2} color={C.ink} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.editBtn} activeOpacity={0.8} onPress={handleDelete}>
+              <Icon name="trash" size={16} stroke={2} color="#FF4444" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Avatar + name */}
@@ -149,6 +169,7 @@ const styles = StyleSheet.create({
     alignItems:        'center',
     justifyContent:    'space-between',
   },
+  topRight: { flexDirection: 'row', gap: 8 },
   backBtn: {
     height:          44,
     paddingHorizontal: 14,

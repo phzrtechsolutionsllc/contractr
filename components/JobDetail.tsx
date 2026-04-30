@@ -51,6 +51,22 @@ export function JobDetail({ job, sync = 'synced' }: JobDetailProps) {
   const nexts     = TRANSITIONS[job.status] ?? [];
   const isClockedIn = Boolean(job.clockedInAt);
 
+  // ---- Delete ----
+  function handleDelete() {
+    Alert.alert(
+      'Delete job?',
+      `"${job.title}" and all its activity will be permanently removed.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => { deleteJob(job.id); router.back(); },
+        },
+      ],
+    );
+  }
+
   // ---- Phone / Map ----
   function handleCall() {
     const phone = customer?.phone;
@@ -146,6 +162,9 @@ export function JobDetail({ job, sync = 'synced' }: JobDetailProps) {
     if (uri) addVoiceEntry(job.id, uri, dur);
   }, [recorder, recordSecs, job.id]);
 
+  // ---- Photo lightbox ----
+  const [lightboxUri, setLightboxUri] = useState<string | null>(null);
+
   // ---- Add Material Modal ----
   const [showAddMat,  setShowAddMat]  = useState(false);
   const [matName,     setMatName]     = useState('');
@@ -189,9 +208,19 @@ export function JobDetail({ job, sync = 'synced' }: JobDetailProps) {
             <TouchableOpacity
               style={styles.editBtn}
               activeOpacity={0.8}
+              onPress={() => router.push(`/invoice/${job.id}` as any)}
+            >
+              <Icon name="dollar" size={16} stroke={2} color={C.ink} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.editBtn}
+              activeOpacity={0.8}
               onPress={() => router.push(`/edit-job?id=${job.id}`)}
             >
               <Icon name="edit" size={16} stroke={2} color={C.ink} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.editBtn} activeOpacity={0.8} onPress={handleDelete}>
+              <Icon name="trash" size={16} stroke={2} color="#FF4444" />
             </TouchableOpacity>
             <SyncBadge state={sync} />
           </View>
@@ -331,6 +360,29 @@ export function JobDetail({ job, sync = 'synced' }: JobDetailProps) {
           </View>
         </View>
 
+        {/* Photos */}
+        {timeline.some(t => t.kind === 'photo' && t.uri) && (
+          <View style={styles.section}>
+            <Text style={styles.sectionHeader}>
+              Photos · {timeline.filter(t => t.kind === 'photo' && t.uri).length}
+            </Text>
+            <View style={styles.photoGrid}>
+              {timeline
+                .filter(t => t.kind === 'photo' && t.uri)
+                .map((t, i) => (
+                  <TouchableOpacity
+                    key={t.id ?? i}
+                    onPress={() => setLightboxUri(t.uri!)}
+                    activeOpacity={0.85}
+                    style={styles.photoGridItem}
+                  >
+                    <Image source={{ uri: t.uri! }} style={styles.photoGridThumb} resizeMode="cover" />
+                  </TouchableOpacity>
+                ))}
+            </View>
+          </View>
+        )}
+
         {/* Activity Timeline */}
         <View style={styles.section}>
           <Text style={styles.sectionHeader}>Activity · {timeline.length}</Text>
@@ -385,6 +437,19 @@ export function JobDetail({ job, sync = 'synced' }: JobDetailProps) {
       </ScrollView>
 
       <RecordingOverlay visible={isRecording} seconds={recordSecs} onStop={handleStopRecording} />
+
+      {/* Photo lightbox */}
+      <Modal visible={!!lightboxUri} transparent animationType="fade" onRequestClose={() => setLightboxUri(null)}>
+        <TouchableOpacity
+          style={styles.lightboxOverlay}
+          activeOpacity={1}
+          onPress={() => setLightboxUri(null)}
+        >
+          {lightboxUri && (
+            <Image source={{ uri: lightboxUri }} style={styles.lightboxImage} resizeMode="contain" />
+          )}
+        </TouchableOpacity>
+      </Modal>
 
       {/* Add Material Modal */}
       <Modal visible={showAddMat} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowAddMat(false)}>
@@ -725,6 +790,18 @@ const styles = StyleSheet.create({
     borderRadius:    2,
     backgroundColor: C.surface2,
   },
+
+  photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  photoGridItem: { borderRadius: 2, overflow: 'hidden' },
+  photoGridThumb: { width: 100, height: 100, backgroundColor: C.surface2 },
+
+  lightboxOverlay: {
+    flex:            1,
+    backgroundColor: 'rgba(0,0,0,0.95)',
+    alignItems:      'center',
+    justifyContent:  'center',
+  },
+  lightboxImage: { width: '100%', height: '80%' },
 
   actions: {
     paddingHorizontal: 20,
