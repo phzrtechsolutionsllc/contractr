@@ -19,14 +19,15 @@ interface FieldProps {
   placeholder: string;
   keyboardType?: 'default' | 'decimal-pad';
   autoFocus?: boolean;
+  multiline?: boolean;
 }
 
-function Field({ label, value, onChangeText, placeholder, keyboardType = 'default', autoFocus }: FieldProps) {
+function Field({ label, value, onChangeText, placeholder, keyboardType = 'default', autoFocus, multiline }: FieldProps) {
   return (
     <View style={field.wrapper}>
       <Text style={field.label}>{label}</Text>
       <TextInput
-        style={field.input}
+        style={[field.input, multiline && field.inputMulti]}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
@@ -34,8 +35,10 @@ function Field({ label, value, onChangeText, placeholder, keyboardType = 'defaul
         keyboardType={keyboardType}
         autoFocus={autoFocus}
         autoCapitalize={keyboardType === 'decimal-pad' ? 'none' : 'words'}
-        returnKeyType="next"
+        returnKeyType={multiline ? 'default' : 'next'}
         selectionColor={C.accent}
+        multiline={multiline}
+        textAlignVertical={multiline ? 'top' : 'auto'}
       />
     </View>
   );
@@ -56,6 +59,7 @@ export default function NewJobScreen() {
   const [price,      setPrice]      = useState('');
   const [hours,      setHours]      = useState('');
   const [dueDate,    setDueDate]    = useState<Date | null>(null);
+  const [desc,       setDesc]       = useState('');
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const canSave = title.trim().length > 0 && customer.trim().length > 0;
@@ -83,7 +87,7 @@ export default function NewJobScreen() {
       photos:     0,
       notes:      0,
       materials:  0,
-      desc:       '',
+      desc:       desc.trim(),
     });
     router.back();
   }
@@ -119,6 +123,7 @@ export default function NewJobScreen() {
           <Field label="Price ($)"  value={price}   onChangeText={setPrice}   placeholder="0" keyboardType="decimal-pad" />
           <Field label="Est. Hours" value={hours} onChangeText={setHours} placeholder="0" keyboardType="decimal-pad" />
           <DateField label="Start Date" value={dueDate} onChange={setDueDate} />
+          <Field label="Notes" value={desc} onChangeText={setDesc} placeholder="Job notes..." multiline />
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -173,5 +178,9 @@ const field = StyleSheet.create({
     fontSize:   18,
     color:      C.ink,
     padding:    0,
+  },
+  inputMulti: {
+    minHeight: 80,
+    fontSize:  16,
   },
 });

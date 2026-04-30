@@ -16,7 +16,7 @@ import {
   useJobTimeline, useJobMaterials, useCustomer,
   clockIn, clockOut, updateStatus, updateJob,
   addPhotoEntry, addVoiceEntry,
-  addMaterial, toggleMaterialGot, deleteMaterial,
+  addMaterial, toggleMaterialGot, deleteMaterial, deleteJob,
 } from '@/db/hooks';
 import type { Job, StatusId } from '@/lib/types';
 import { Icon } from './ui/Icon';

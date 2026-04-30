@@ -18,7 +18,13 @@
       "expo-router",
       "expo-asset",
       "expo-audio",
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "CONTRACTR uses your contacts to quickly add customer info."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
