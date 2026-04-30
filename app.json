@@ -19,6 +19,7 @@
       "expo-asset",
       "expo-audio",
       "expo-sqlite",
+      "expo-apple-authentication",
       [
         "expo-contacts",
         {
