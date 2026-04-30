@@ -1,7 +1,7 @@
 import React, { useCallback, useRef, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  Alert, Image, TextInput, Modal,
+  Alert, Image, TextInput, Modal, Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -13,10 +13,10 @@ import {
 } from 'expo-audio';
 import { C, FONT, STATUS_LABEL, STATUS_COLOR, money } from '@/lib/constants';
 import {
-  useJobTimeline, useJobMaterials,
+  useJobTimeline, useJobMaterials, useCustomer,
   clockIn, clockOut, updateStatus, updateJob,
   addPhotoEntry, addVoiceEntry,
-  addMaterial, toggleMaterialGot, deleteMaterial,
+  addMaterial, toggleMaterialGot, deleteMaterial, deleteJob,
 } from '@/db/hooks';
 import type { Job, StatusId } from '@/lib/types';
 import { Icon } from './ui/Icon';
@@ -46,9 +46,44 @@ export function JobDetail({ job, sync = 'synced' }: JobDetailProps) {
   const router    = useRouter();
   const timeline  = useJobTimeline(job.id);
   const materials = useJobMaterials(job.id);
+  const customer  = useCustomer(job.customerId);
   const sc        = STATUS_COLOR[job.status];
   const nexts     = TRANSITIONS[job.status] ?? [];
   const isClockedIn = Boolean(job.clockedInAt);
+
+  // ---- Delete ----
+  function handleDelete() {
+    Alert.alert(
+      'Delete job?',
+      `"${job.title}" and all its activity will be permanently removed.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => { deleteJob(job.id); router.back(); },
+        },
+      ],
+    );
+  }
+
+  // ---- Phone / Map ----
+  function handleCall() {
+    const phone = customer?.phone;
+    if (!phone) { Alert.alert('No phone number', 'Edit this customer to add one.'); return; }
+    Linking.openURL(`tel:${phone.replace(/\D/g, '')}`).catch(() => {
+      Alert.alert(customer?.name ?? 'Customer', phone, [{ text: 'OK' }]);
+    });
+  }
+
+  function handleMap() {
+    const addr = job.address !== '—' ? job.address : null;
+    if (!addr) { Alert.alert('No address', 'Edit this job to add an address.'); return; }
+    const encoded = encodeURIComponent(addr);
+    Linking.openURL(`maps://?q=${encoded}`).catch(() =>
+      Linking.openURL(`https://maps.apple.com/?q=${encoded}`)
+    );
+  }
 
   // ---- Notes ----
   const [notes, setNotes] = useState(job.desc ?? '');
@@ -127,6 +162,9 @@ export function JobDetail({ job, sync = 'synced' }: JobDetailProps) {
     if (uri) addVoiceEntry(job.id, uri, dur);
   }, [recorder, recordSecs, job.id]);
 
+  // ---- Photo lightbox ----
+  const [lightboxUri, setLightboxUri] = useState<string | null>(null);
+
   // ---- Add Material Modal ----
   const [showAddMat,  setShowAddMat]  = useState(false);
   const [matName,     setMatName]     = useState('');
@@ -170,9 +208,19 @@ export function JobDetail({ job, sync = 'synced' }: JobDetailProps) {
             <TouchableOpacity
               style={styles.editBtn}
               activeOpacity={0.8}
+              onPress={() => router.push(`/invoice/${job.id}` as any)}
+            >
+              <Icon name="dollar" size={16} stroke={2} color={C.ink} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.editBtn}
+              activeOpacity={0.8}
               onPress={() => router.push(`/edit-job?id=${job.id}`)}
             >
               <Icon name="edit" size={16} stroke={2} color={C.ink} />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.editBtn} activeOpacity={0.8} onPress={handleDelete}>
+              <Icon name="trash" size={16} stroke={2} color="#FF4444" />
             </TouchableOpacity>
             <SyncBadge state={sync} />
           </View>
@@ -188,10 +236,10 @@ export function JobDetail({ job, sync = 'synced' }: JobDetailProps) {
               <Text style={styles.customerName}>{job.customer}</Text>
               <Text style={styles.customerAddr}>{job.address}</Text>
             </View>
-            <TouchableOpacity style={styles.callBtn} activeOpacity={0.8}>
+            <TouchableOpacity style={styles.callBtn} activeOpacity={0.8} onPress={handleCall}>
               <Icon name="phone" size={22} stroke={2.5} color="#0A0A0A" />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.mapBtn} activeOpacity={0.8}>
+            <TouchableOpacity style={styles.mapBtn} activeOpacity={0.8} onPress={handleMap}>
               <Icon name="map" size={22} stroke={2} color={C.ink} />
             </TouchableOpacity>
           </View>
@@ -312,6 +360,29 @@ export function JobDetail({ job, sync = 'synced' }: JobDetailProps) {
           </View>
         </View>
 
+        {/* Photos */}
+        {timeline.some(t => t.kind === 'photo' && t.uri) && (
+          <View style={styles.section}>
+            <Text style={styles.sectionHeader}>
+              Photos · {timeline.filter(t => t.kind === 'photo' && t.uri).length}
+            </Text>
+            <View style={styles.photoGrid}>
+              {timeline
+                .filter(t => t.kind === 'photo' && t.uri)
+                .map((t, i) => (
+                  <TouchableOpacity
+                    key={t.id ?? i}
+                    onPress={() => setLightboxUri(t.uri!)}
+                    activeOpacity={0.85}
+                    style={styles.photoGridItem}
+                  >
+                    <Image source={{ uri: t.uri! }} style={styles.photoGridThumb} resizeMode="cover" />
+                  </TouchableOpacity>
+                ))}
+            </View>
+          </View>
+        )}
+
         {/* Activity Timeline */}
         <View style={styles.section}>
           <Text style={styles.sectionHeader}>Activity · {timeline.length}</Text>
@@ -366,6 +437,19 @@ export function JobDetail({ job, sync = 'synced' }: JobDetailProps) {
       </ScrollView>
 
       <RecordingOverlay visible={isRecording} seconds={recordSecs} onStop={handleStopRecording} />
+
+      {/* Photo lightbox */}
+      <Modal visible={!!lightboxUri} transparent animationType="fade" onRequestClose={() => setLightboxUri(null)}>
+        <TouchableOpacity
+          style={styles.lightboxOverlay}
+          activeOpacity={1}
+          onPress={() => setLightboxUri(null)}
+        >
+          {lightboxUri && (
+            <Image source={{ uri: lightboxUri }} style={styles.lightboxImage} resizeMode="contain" />
+          )}
+        </TouchableOpacity>
+      </Modal>
 
       {/* Add Material Modal */}
       <Modal visible={showAddMat} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setShowAddMat(false)}>
@@ -706,6 +790,18 @@ const styles = StyleSheet.create({
     borderRadius:    2,
     backgroundColor: C.surface2,
   },
+
+  photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  photoGridItem: { borderRadius: 2, overflow: 'hidden' },
+  photoGridThumb: { width: 100, height: 100, backgroundColor: C.surface2 },
+
+  lightboxOverlay: {
+    flex:            1,
+    backgroundColor: 'rgba(0,0,0,0.95)',
+    alignItems:      'center',
+    justifyContent:  'center',
+  },
+  lightboxImage: { width: '100%', height: '80%' },
 
   actions: {
     paddingHorizontal: 20,

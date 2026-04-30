@@ -257,6 +257,23 @@ export function deleteMaterial(id: number, jobId: string) {
   db.update(jobs).set({ materials: Math.max(0, (row?.materials ?? 1) - 1) }).where(eq(jobs.id, jobId)).run();
 }
 
+export function deleteJob(id: string) {
+  const job = db.select({ customerId: jobs.customerId }).from(jobs).where(eq(jobs.id, id)).get();
+  if (job) {
+    const cRow = db.select({ jobs: customers.jobs }).from(customers).where(eq(customers.id, job.customerId)).get();
+    if (cRow !== undefined) {
+      db.update(customers).set({ jobs: Math.max(0, cRow.jobs - 1) }).where(eq(customers.id, job.customerId)).run();
+    }
+  }
+  db.delete(materials).where(eq(materials.jobId, id)).run();
+  db.delete(timeline).where(eq(timeline.jobId, id)).run();
+  db.delete(jobs).where(eq(jobs.id, id)).run();
+}
+
+export function deleteCustomer(id: string) {
+  db.delete(customers).where(eq(customers.id, id)).run();
+}
+
 function fmtNow() {
   const d    = new Date();
   let h      = d.getHours();

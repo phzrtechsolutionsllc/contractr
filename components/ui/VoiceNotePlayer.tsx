@@ -12,10 +12,21 @@ interface VoiceNotePlayerProps {
 export function VoiceNotePlayer({ uri, label }: VoiceNotePlayerProps) {
   const player = useAudioPlayer(uri);
 
+  async function handlePress() {
+    if (player.playing) {
+      player.pause();
+    } else {
+      if (player.duration > 0 && player.currentTime >= player.duration - 0.1) {
+        await player.seekTo(0);
+      }
+      player.play();
+    }
+  }
+
   return (
     <TouchableOpacity
       style={styles.row}
-      onPress={() => (player.playing ? player.pause() : player.play())}
+      onPress={handlePress}
       activeOpacity={0.8}
     >
       <View style={[styles.btn, player.playing && styles.btnActive]}>

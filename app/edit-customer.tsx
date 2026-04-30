@@ -7,6 +7,8 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { C, FONT } from '@/lib/constants';
 import { useCustomer, updateCustomer } from '@/db/hooks';
+import { ContactsPicker } from '@/components/ContactsPicker';
+import { Icon } from '@/components/ui/Icon';
 
 interface FieldProps {
   label: string;
@@ -40,11 +42,18 @@ export default function EditCustomerScreen() {
   const { id }     = useLocalSearchParams<{ id: string }>();
   const customer   = useCustomer(id ?? '');
 
-  const [name,    setName]    = useState(customer?.name    ?? '');
-  const [phone,   setPhone]   = useState(customer?.phone   ?? '');
-  const [address, setAddress] = useState(customer?.address ?? '');
+  const [name,         setName]         = useState(customer?.name    ?? '');
+  const [phone,        setPhone]        = useState(customer?.phone   ?? '');
+  const [address,      setAddress]      = useState(customer?.address ?? '');
+  const [contactsOpen, setContactsOpen] = useState(false);
 
   const canSave = name.trim().length > 0;
+
+  function handleImport(c: { name: string; phone: string; address: string }) {
+    setName(c.name);
+    setPhone(c.phone);
+    setAddress(c.address);
+  }
 
   function handleSave() {
     if (!canSave || !id) return;
@@ -78,17 +87,46 @@ export default function EditCustomerScreen() {
         </View>
 
         <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
+          <TouchableOpacity
+            style={styles.importBtn}
+            onPress={() => setContactsOpen(true)}
+            activeOpacity={0.8}
+          >
+            <Icon name="people" size={16} stroke={2} color={C.ink} />
+            <Text style={styles.importLabel}>Import from Contacts</Text>
+          </TouchableOpacity>
+
           <Field label="Full Name" value={name}    onChangeText={setName}    placeholder="e.g. Patricia Nguyen" />
           <Field label="Phone"     value={phone}   onChangeText={setPhone}   placeholder="(555) 000-0000" keyboardType="phone-pad" />
           <Field label="Address"   value={address} onChangeText={setAddress} placeholder="Street address" />
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <ContactsPicker
+        visible={contactsOpen}
+        onSelect={handleImport}
+        onClose={() => setContactsOpen(false)}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
+  importBtn: {
+    flexDirection:     'row',
+    alignItems:        'center',
+    gap:               10,
+    paddingVertical:   14,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+  },
+  importLabel: {
+    fontFamily:    FONT.extrabold,
+    fontSize:      14,
+    color:         C.ink,
+    letterSpacing: 0.3,
+  },
   header: {
     flexDirection:    'row',
     alignItems:       'center',

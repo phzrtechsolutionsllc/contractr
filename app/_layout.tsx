@@ -39,6 +39,7 @@ export default function RootLayout() {
         <Stack.Screen name="edit-job"      options={{ presentation: 'modal' }} />
         <Stack.Screen name="new-customer"  options={{ presentation: 'modal' }} />
         <Stack.Screen name="edit-customer" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="invoice/[id]" />
       </Stack>
       <StatusBar style="light" />
     </StoreProvider>
